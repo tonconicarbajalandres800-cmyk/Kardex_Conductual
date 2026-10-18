@@ -52,18 +52,18 @@ class Estudiante extends Model
         return $this->hasMany(Citacion::class);
     }
 
-    // OBTENER URL DE LA FOTO
+    // OBTENER URL DE LA FOTO (CORREGIDO)
     public function getFotoUrlAttribute()
     {
         // Buscar en la relación fotos
         if ($this->fotos && $this->fotos->count() > 0) {
             $ruta = $this->fotos->last()->ruta;
-            return asset('storage/' . $ruta);
+            return asset($ruta); // <-- CORREGIDO: sin 'storage/'
         }
         
         // Buscar en el campo directo
         if ($this->foto) {
-            return asset('storage/' . $this->foto);
+            return asset($this->foto); // <-- CORREGIDO: sin 'storage/'
         }
         
         return null;

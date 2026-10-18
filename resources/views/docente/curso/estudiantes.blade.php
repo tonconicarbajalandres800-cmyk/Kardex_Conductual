@@ -138,8 +138,16 @@
         </div>
     </div>
 
-    <!-- Botón para subir foto -->
-    <div class="mb-4 flex justify-end">
+    <!-- BOTONES DE ACCIÓN RÁPIDA (AQUÍ ESTÁ EL CAMBIO) -->
+    <div class="mb-4 flex justify-end gap-3">
+        <!-- Botón de PDF -->
+        <a href="{{ route('docente.curso.lista.pdf', $curso->id) }}" target="_blank"
+           class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition duration-200 shadow-sm hover:shadow-md">
+            <i class="fi fi-sr-file-pdf"></i>
+            Descargar Lista PDF
+        </a>
+
+        <!-- Botón de Subir Foto -->
         <button onclick="document.getElementById('modalFoto').style.display='flex'" 
                 class="inline-flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition duration-200 shadow-sm hover:shadow-md">
             <i class="fi fi-sr-camera"></i>

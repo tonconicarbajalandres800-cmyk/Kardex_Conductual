@@ -56,28 +56,66 @@
             <!-- COLUMNA 1: CURSO + ESTUDIANTES (5/12) -->
             <div class="xl:col-span-5 space-y-6">
 
-                <!-- Selección de curso -->
-                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-t-4 border-blue-700">
+                <!-- SELECCIÓN DE CURSO (NUEVO DISEÑO) -->
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-t-4 border-blue-700 relative z-20">
                     <label class="block text-sm font-black text-blue-900 dark:text-blue-200 mb-3 tracking-wide flex items-center gap-2">
                         <i class="fi fi-sr-book"></i>
                         SELECCIONAR CURSO
                     </label>
-                    <select id="curso-select" 
-                            class="w-full border-2 border-blue-200 dark:border-gray-600 rounded-xl px-5 py-4 text-base focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition bg-blue-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-semibold shadow-inner">
-                        @foreach($cursos->sortBy(function($curso) {
-                            $ordenNivel = [
-                                '1ro' => 1, '2do' => 2, '3ro' => 3,
-                                '4to' => 4, '5to' => 5, '6to' => 6
-                            ];
-                            $nivel = explode(' ', $curso->nombre)[0] ?? '0';
-                            $nivelNum = $ordenNivel[$nivel] ?? 99;
-                            return $nivelNum . '-' . $curso->paralelo;
-                        }) as $curso)
-                            <option value="{{ $curso->id }}" {{ $cursoSeleccionado && $cursoSeleccionado->id == $curso->id ? 'selected' : '' }}>
-                                {{ $curso->nombre }} {{ $curso->paralelo }} - {{ $curso->gestion }}
-                            </option>
-                        @endforeach
-                    </select>
+                    
+                    <div class="relative" id="custom-dropdown-container">
+                        <!-- Botón que abre el menú -->
+                        <button type="button" onclick="toggleCustomDropdown()" 
+                                class="flex items-center justify-between w-full border-2 border-blue-200 dark:border-gray-600 rounded-xl px-5 py-4 bg-blue-50 dark:bg-gray-700 font-semibold text-gray-800 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-gray-600 transition shadow-inner">
+                            <span class="flex items-center gap-2 text-base">
+                                <i class="fi fi-sr-graduation-cap text-blue-700 dark:text-blue-400"></i>
+                                {{ $cursoSeleccionado->nombre ?? 'Seleccione' }} {{ $cursoSeleccionado->paralelo ?? '' }} - {{ $cursoSeleccionado->gestion ?? '' }}
+                            </span>
+                            <i class="fi fi-sr-angle-down text-gray-500 transition-transform duration-300" id="dropdown-icon"></i>
+                        </button>
+
+                        <!-- Menú Desplegable Cuadrado -->
+                        <div id="custom-dropdown-menu" class="hidden absolute left-0 mt-2 w-[110%] min-w-[400px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-2xl shadow-2xl p-4 grid grid-cols-3 gap-3 max-h-[350px] overflow-y-auto">
+                            @php
+                                // Diccionario para ordenar correctamente los niveles
+                                $ordenNivel = [
+                                    '1ro' => 1, '1er' => 1, 'Primero' => 1,
+                                    '2do' => 2, 'Segundo' => 2,
+                                    '3ro' => 3, 'Tercero' => 3,
+                                    '4to' => 4, 'Cuarto' => 4,
+                                    '5to' => 5, 'Quinto' => 5,
+                                    '6to' => 6, 'Sexto' => 6
+                                ];
+                                
+                                // Ordenamos los cursos
+                                $cursosOrdenados = $cursos->sortBy(function($c) use ($ordenNivel) {
+                                    $nivel = explode(' ', $c->nombre)[0] ?? '0';
+                                    return ($ordenNivel[$nivel] ?? 99) . '-' . $c->paralelo;
+                                });
+                            @endphp
+
+                            @foreach($cursosOrdenados as $c)
+                                <a href="{{ route('docente.incidencia.create') }}?curso={{ $c->id }}"
+                                   class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 
+                                   {{ $cursoSeleccionado && $cursoSeleccionado->id == $c->id 
+                                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 shadow-md transform scale-105' 
+                                       : 'border-gray-200 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                    
+                                    <span class="text-sm font-black text-center {{ $cursoSeleccionado && $cursoSeleccionado->id == $c->id ? 'text-blue-800 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200' }}">
+                                        {{ $c->nombre }}
+                                    </span>
+                                    
+                                    <!-- Etiqueta del Paralelo mejorada -->
+                                    <span class="text-sm font-black mt-1.5 px-3 py-0.5 rounded-full shadow-sm transition-colors
+                                        {{ $cursoSeleccionado && $cursoSeleccionado->id == $c->id 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'bg-blue-100 text-blue-800 dark:bg-gray-600 dark:text-gray-200' }}">
+                                        {{ $c->paralelo }}
+                                    </span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Lista de estudiantes con checkboxes -->
@@ -136,7 +174,9 @@
                                                         $fotoUrl = null;
                                                         if ($estudiante && $estudiante->fotos && $estudiante->fotos->count() > 0) {
                                                             $ultimaFoto = $estudiante->fotos->last();
-                                                            $fotoUrl = asset('storage/' . $ultimaFoto->ruta);
+                                                            $fotoUrl = asset($ultimaFoto->ruta);
+                                                        } elseif ($estudiante && $estudiante->foto) {
+                                                            $fotoUrl = asset($estudiante->foto);
                                                         }
                                                     @endphp
 
@@ -236,13 +276,11 @@
                             </div>
                         </div>
 
+                        <!-- SECCIÓN DE MATERIA -->
                         <div class="mt-6">
                             <label class="block text-sm font-black text-blue-900 dark:text-blue-200 mb-2 tracking-wide flex items-center gap-2">
                                 <i class="fi fi-sr-book"></i>
                                 MATERIA
-                                @if(count($materiasDocente) == 1)
-                                    <span class="text-xs font-normal text-gray-500">(Asignada automáticamente)</span>
-                                @endif
                             </label>
                             
                             @if(count($materiasDocente) == 1)
@@ -251,8 +289,7 @@
                                     <input type="hidden" name="materia" value="{{ $materiasDocente[0] }}">
                                 </div>
                                 <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                                    <i class="fi fi-sr-info"></i>
-                                    Materia asignada a tu perfil
+                                    <i class="fi fi-sr-info"></i> Materia asignada a tu perfil
                                 </p>
                             @elseif(count($materiasDocente) > 1)
                                 <select name="materia" class="w-full border-2 border-blue-200 dark:border-gray-600 rounded-xl px-5 py-3.5 text-base focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition bg-blue-50 dark:bg-gray-700 font-semibold text-gray-800 dark:text-gray-100">
@@ -261,21 +298,17 @@
                                     @endforeach
                                 </select>
                                 <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                                    <i class="fi fi-sr-info"></i>
-                                    Selecciona una de tus materias asignadas
+                                    <i class="fi fi-sr-info"></i> Selecciona una de tus materias asignadas
                                 </p>
                             @else
-                                <select name="materia" class="w-full border-2 border-blue-200 dark:border-gray-600 rounded-xl px-5 py-3.5 text-base focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition bg-blue-50 dark:bg-gray-700 font-semibold text-gray-800 dark:text-gray-100">
-                                    @foreach(['Matemáticas', 'Física', 'Química', 'Lenguaje', 'Historia', 'Biología', 'Educación Física', 'Inglés', 'Arte', 'Música', 'Religión'] as $materia)
-                                        <option value="{{ $materia }}">{{ $materia }}</option>
-                                    @endforeach
-                                </select>
-                                @if($mostrarAdvertencia ?? false)
-                                    <p class="text-xs text-yellow-600 mt-1 flex items-center gap-1">
-                                        <i class="fi fi-sr-triangle-warning"></i>
-                                        No tienes materias asignadas. Contacta al administrador.
-                                    </p>
-                                @endif
+                                <div class="w-full border-2 border-red-300 dark:border-red-700 rounded-xl px-5 py-4 text-base bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 font-bold flex items-center gap-3">
+                                    <i class="fi fi-sr-triangle-warning text-2xl"></i>
+                                    No tienes materias asignadas en tu perfil.
+                                </div>
+                                <p class="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                    <i class="fi fi-sr-info"></i>
+                                    Contacta al administrador para que te asigne una materia antes de registrar incidencias.
+                                </p>
                             @endif
                         </div>
 
@@ -303,11 +336,13 @@
                         <!-- Botones de acción -->
                         <div class="mt-6 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
                             <a href="{{ $cursoSeleccionado ? route('docente.curso.estudiantes', $cursoSeleccionado->id) : route('docente.cursos.seleccionar') }}" 
-   class="px-7 py-3.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition font-black text-sm text-center shadow-md flex items-center justify-center gap-2">
-    <i class="fi fi-sr-arrow-left"></i>
-    Cancelar
-</a>
-                            <button type="submit" id="btn-registrar" disabled
+                               class="px-7 py-3.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition font-black text-sm text-center shadow-md flex items-center justify-center gap-2">
+                                <i class="fi fi-sr-arrow-left"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit" id="btn-registrar" 
+                                    {{ count($materiasDocente) == 0 ? 'disabled' : '' }} 
+                                    disabled
                                     class="px-7 py-3.5 bg-blue-800 hover:bg-blue-900 text-white rounded-xl hover:shadow-2xl hover:scale-[1.02] transition-all font-black text-sm shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                                 <i class="fi fi-sr-disk"></i>
                                 Registrar Incidencia Masiva
@@ -498,15 +533,35 @@
 <!-- JAVASCRIPT -->
 <!-- ============================================ -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Selección de curso
-        const cursoSelect = document.getElementById('curso-select');
-        if (cursoSelect) {
-            cursoSelect.addEventListener('change', function() {
-                window.location.href = '{{ route('docente.incidencia.create') }}?curso=' + this.value;
-            });
+    // ============================================
+    // FUNCIONES PARA EL NUEVO DROPDOWN PERSONALIZADO
+    // ============================================
+    function toggleCustomDropdown() {
+        const menu = document.getElementById('custom-dropdown-menu');
+        const icon = document.getElementById('dropdown-icon');
+        
+        if (menu.classList.contains('hidden')) {
+            menu.classList.remove('hidden');
+            icon.style.transform = 'rotate(180deg)';
+        } else {
+            menu.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
         }
+    }
 
+    // Cerrar el menú si se hace clic fuera de él
+    window.addEventListener('click', function(e) {
+        const container = document.getElementById('custom-dropdown-container');
+        const menu = document.getElementById('custom-dropdown-menu');
+        const icon = document.getElementById('dropdown-icon');
+        
+        if (container && !container.contains(e.target) && menu && !menu.classList.contains('hidden')) {
+            menu.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
         // Contador de seleccionados
         const checkboxes = document.querySelectorAll('.checkbox-estudiante');
         const contador = document.getElementById('contador-seleccionados');
@@ -523,7 +578,13 @@
             if (count > 0) {
                 alertaSeleccion.classList.remove('hidden');
                 totalSeleccionados.textContent = count;
-                btnRegistrar.disabled = false;
+                
+                // Solo habilitar el botón si el docente tiene materias
+                @if(count($materiasDocente) > 0)
+                    btnRegistrar.disabled = false;
+                @else
+                    btnRegistrar.disabled = true;
+                @endif
                 
                 const ids = Array.from(seleccionados).map(cb => cb.value).join(',');
                 inputEstudiantes.value = ids;

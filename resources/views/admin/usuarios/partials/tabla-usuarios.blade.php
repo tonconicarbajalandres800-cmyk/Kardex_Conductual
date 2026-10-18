@@ -1,5 +1,7 @@
 @php
     $tablaId = '';
+    $esTablaEstudiantes = false;
+    
     if(isset($usuarios) && $usuarios->count() > 0) {
         $primerUsuario = $usuarios->first();
         if($primerUsuario->rol === 'docente') {
@@ -8,6 +10,7 @@
             $tablaId = 'tabla-padres';
         } elseif($primerUsuario->rol === 'estudiante') {
             $tablaId = 'tabla-estudiantes';
+            $esTablaEstudiantes = true;
         } else {
             $tablaId = 'tabla-' . uniqid();
         }
@@ -21,7 +24,12 @@
                 <th class="text-left py-2 px-3 text-xs font-bold uppercase tracking-wider">#</th>
                 <th class="text-left py-2 px-3 text-xs font-bold uppercase tracking-wider">FOTO</th>
                 <th class="text-left py-2 px-3 text-xs font-bold uppercase tracking-wider">NOMBRE</th>
-                <th class="text-left py-2 px-3 text-xs font-bold uppercase tracking-wider">EMAIL</th>
+                
+                <!-- ENCABEZADO DINÁMICO: C.I. o EMAIL -->
+                <th class="text-left py-2 px-3 text-xs font-bold uppercase tracking-wider">
+                    {{ $esTablaEstudiantes ? 'C.I.' : 'EMAIL' }}
+                </th>
+                
                 <th class="text-left py-2 px-3 text-xs font-bold uppercase tracking-wider">ASIGNACIÓN</th>
                 <th class="text-left py-2 px-3 text-xs font-bold uppercase tracking-wider">ESTADO</th>
                 <th class="text-center py-2 px-3 text-xs font-bold uppercase tracking-wider">ACCIONES</th>
@@ -47,20 +55,26 @@
                         $nombreCurso = $curso->nombre . ' ' . $curso->paralelo;
                     }
                 } elseif ($usuario->rol === 'padre') {
-                    $hijos = \App\Models\Estudiante::where('padre_id', $usuario->id)->get();
-                    $cursosIds = [];
-                    $cursosNombres = [];
-                    foreach($hijos as $hijo) {
-                        if($hijo->curso_id) {
-                            $curso = \App\Models\Curso::find($hijo->curso_id);
-                            if($curso) {
-                                $cursosIds[] = $curso->id;
-                                $cursosNombres[] = $curso->nombre . ' ' . $curso->paralelo;
+                    // En tu base de datos padre_id apunta a la tabla 'padres.id', 
+                    // por lo que se debe buscar por el ID de padre, no por el user_id.
+                    // Si tu relación usa user_id, cambialo aquí según corresponda.
+                    $padreModel = \App\Models\Padre::where('user_id', $usuario->id)->first();
+                    if ($padreModel) {
+                        $hijos = \App\Models\Estudiante::where('padre_id', $padreModel->id)->get();
+                        $cursosIds = [];
+                        $cursosNombres = [];
+                        foreach($hijos as $hijo) {
+                            if($hijo->curso_id) {
+                                $curso = \App\Models\Curso::find($hijo->curso_id);
+                                if($curso) {
+                                    $cursosIds[] = $curso->id;
+                                    $cursosNombres[] = $curso->nombre . ' ' . $curso->paralelo;
+                                }
                             }
                         }
+                        $cursoId = implode(',', $cursosIds);
+                        $nombreCurso = implode(', ', $cursosNombres);
                     }
-                    $cursoId = implode(',', $cursosIds);
-                    $nombreCurso = implode(', ', $cursosNombres);
                 }
             @endphp
             <tr class="hover:bg-gray-50 transition" 
@@ -73,8 +87,9 @@
                     @php
                         $fotoUrl = null;
                         if ($usuario->foto) {
-                            $nombreArchivo = basename($usuario->foto);
-                            $fotoUrl = asset('storage/fotos/' . $nombreArchivo);
+                            $fotoUrl = asset($usuario->foto); // Ajustado a tu ruta public/images/storage/fotos
+                        } elseif ($usuario->rol === 'estudiante' && $usuario->estudiante && $usuario->estudiante->fotos->count() > 0) {
+                            $fotoUrl = asset($usuario->estudiante->fotos->last()->ruta);
                         }
                     @endphp
 
@@ -82,8 +97,8 @@
                         <img src="{{ $fotoUrl }}" 
                              alt="Foto de {{ $usuario->nombre }}" 
                              class="h-8 w-8 rounded-full object-cover border-2 border-gray-200 shadow-sm"
-                             onerror="this.style.display='none'; this.parentElement.querySelector('.fallback-admin').style.display='flex';">
-                        <div class="fallback-admin h-8 w-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-bold text-xs shadow-sm" style="display:none;">
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="h-8 w-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-bold text-xs shadow-sm" style="display:none;">
                             {{ strtoupper(substr($usuario->nombre, 0, 1)) }}
                         </div>
                     @else
@@ -94,7 +109,19 @@
                 </td>
                 
                 <td class="py-2 px-3 font-medium text-gray-800">{{ $usuario->nombre }} {{ $usuario->apellidos }}</td>
-                <td class="py-2 px-3 text-gray-600">{{ $usuario->email }}</td>
+                
+                <!-- CELDA DINÁMICA: C.I. o EMAIL -->
+                <td class="py-2 px-3 text-gray-600">
+                    @if($usuario->rol === 'estudiante')
+                        <div class="flex items-center gap-1 font-mono text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded w-max">
+                            <i class="fi fi-sr-id-badge"></i>
+                            {{ $usuario->ci }}
+                        </div>
+                    @else
+                        {{ $usuario->email }}
+                    @endif
+                </td>
+                
                 <td class="py-2 px-3 text-gray-600 text-sm">
                     {{ $nombreCurso ?: 'Sin asignar' }}
                 </td>
@@ -114,7 +141,7 @@
                         </a>
                         @if(Auth::user()->rol === 'admin')
                             <button type="button" 
-                                    onclick="confirmarEliminacion({{ $usuario->id }}, '{{ $usuario->nombre }} {{ $usuario->apellidos }}', '{{ $usuario->email }}', '{{ $usuario->rol }}')" 
+                                    onclick="confirmarEliminacion({{ $usuario->id }}, @js($usuario->nombre . ' ' . $usuario->apellidos), @js($usuario->email), @js($usuario->rol))" 
                                     class="text-red-600 hover:text-red-800 hover:underline text-xs font-medium">
                                 🗑️ Eliminar
                             </button>

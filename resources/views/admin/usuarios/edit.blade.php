@@ -158,23 +158,42 @@
             </div>
 
             <!-- ========================================== -->
-            <!-- SECCIÓN: DOCENTE -->
+            <!-- SECCIÓN: DOCENTE (CORREGIDA CON CHECKBOXES) -->
             <!-- ========================================== -->
             <div id="seccion-docente" class="mt-6 {{ $usuario->rol === 'docente' ? '' : 'hidden' }}">
                 <h3 class="font-black text-blue-900 dark:text-blue-200 border-b border-gray-200 dark:border-gray-700 pb-2 mb-4 flex items-center gap-2">
                     <i class="fi fi-sr-chalkboard-user"></i>
                     DATOS DEL DOCENTE
                 </h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Materia</label>
-                        <select name="materia" class="w-full border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                            <option value="">Seleccione una materia</option>
-                            @foreach(['Matemáticas', 'Física', 'Química', 'Lenguaje', 'Historia', 'Geografía', 'Biología', 'Educación Física', 'Inglés', 'Arte', 'Música', 'Religión'] as $mat)
-                                <option value="{{ $mat }}" {{ old('materia', $docente->especialidad ?? '') == $mat ? 'selected' : '' }}>{{ $mat }}</option>
-                            @endforeach
-                        </select>
+                
+                <!-- MATERIAS -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Materias asignadas</label>
+                    
+                    @php
+                        // Obtenemos las materias actuales del docente
+                        $materiasActuales = $docente && is_array($docente->materias) ? $docente->materias : [];
+                        // Todas las materias posibles
+                        $todasLasMaterias = ['Matemáticas', 'Física', 'Química', 'Lenguaje', 'Historia', 'Geografía', 'Biología', 'Educación Física', 'Inglés', 'Arte', 'Música', 'Religión', 'Informática', 'Filosofía', 'Psicología'];
+                    @endphp
+
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                        @foreach($todasLasMaterias as $mat)
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" name="materias[]" value="{{ $mat }}" 
+                                       {{ in_array($mat, $materiasActuales) ? 'checked' : '' }}
+                                       class="rounded border-gray-300 text-blue-700 focus:ring-blue-500 w-4 h-4">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">{{ $mat }}</span>
+                            </label>
+                        @endforeach
                     </div>
+                    <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                        <i class="fi fi-sr-info"></i> Selecciona todas las materias que imparte este docente.
+                    </p>
+                </div>
+
+                <!-- ENCARGADO Y CURSO -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div class="flex items-center">
                         <label class="flex items-center space-x-2">
                             <input type="checkbox" name="es_encargado" value="1" {{ old('es_encargado', $docente->es_encargado ?? false) ? 'checked' : '' }} 
@@ -182,17 +201,17 @@
                             <span class="text-sm text-gray-700 dark:text-gray-300">Es encargado/asesor de curso</span>
                         </label>
                     </div>
-                </div>
-                <div class="mt-3">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Curso encargado</label>
-                    <select name="curso_encargado" class="w-full border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                        <option value="">Ninguno</option>
-                        @foreach($cursos as $curso)
-                            <option value="{{ $curso->id }}" {{ old('curso_encargado', $docente->curso_encargado_id ?? '') == $curso->id ? 'selected' : '' }}>
-                                {{ $curso->nombre }} {{ $curso->paralelo }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Curso encargado</label>
+                        <select name="curso_encargado" class="w-full border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="">Ninguno</option>
+                            @foreach($cursos as $curso)
+                                <option value="{{ $curso->id }}" {{ old('curso_encargado', $docente->curso_encargado_id ?? '') == $curso->id ? 'selected' : '' }}>
+                                    {{ $curso->nombre }} {{ $curso->paralelo }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -246,7 +265,7 @@
                 </h3>
                 @if($usuario->foto)
                     <div class="mb-3">
-                        <img src="{{ asset('storage/' . $usuario->foto) }}" alt="Foto" class="h-20 w-20 rounded-full object-cover border-4 border-blue-300 shadow-lg">
+                        <img src="{{ asset($usuario->foto) }}" alt="Foto" class="h-20 w-20 rounded-full object-cover border-4 border-blue-300 shadow-lg">
                     </div>
                 @endif
                 <input type="file" name="foto" accept="image/*" 

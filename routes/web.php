@@ -4,7 +4,6 @@ use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\DocenteDashboardController;
-use App\Http\Controllers\PadreDashboardController;
 use App\Http\Controllers\Docente\IncidenciaController;
 use App\Http\Controllers\Docente\CursoController;
 use App\Http\Controllers\Admin\UsuarioController;
@@ -21,20 +20,7 @@ use App\Http\Controllers\Docente\CitacionController;
 use App\Http\Controllers\Admin\ConfiguracionController;
 use App\Http\Controllers\Admin\CitacionController as AdminCitacionController;
 use App\Http\Controllers\FotoEstudianteController;
-use App\Http\Controllers\Auth\ForgotPasswordController;
-use App\Http\Controllers\Auth\ResetPasswordController;
 
-
-Route::middleware('guest')->group(function () {
-    Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])
-        ->name('password.request');
-    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
-        ->name('password.email');
-    Route::get('/reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])
-        ->name('password.reset');
-    Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
-        ->name('password.update');
-});
 
 // ===================== FOTOS =====================
 Route::get('/fotos-estudiantes', [FotoEstudianteController::class, 'index']);
@@ -61,7 +47,7 @@ Route::middleware('auth')->group(function () {
     // --- Dashboards por rol ---
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/docente/dashboard', [DocenteDashboardController::class, 'index'])->name('docente.dashboard');
-    Route::get('/padre/dashboard', [PadreDashboardController::class, 'index'])->name('padre.dashboard');
+    
 
     // ============================================
     // MÓDULO DOCENTE: INCIDENCIAS
@@ -109,6 +95,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/docente/estadisticas/estudiante/{id}', [EstadisticasController::class, 'estudiante'])->name('docente.estadisticas.estudiante');
     Route::get('/docente/estadisticas/incidencias/{id}', [EstadisticasController::class, 'getIncidenciasEstudiante'])->name('docente.estadisticas.incidencias');
 
+
+    //PDF
+        // Descargar lista de estudiantes en PDF
+    Route::get('/docente/curso/{curso}/lista-pdf', [App\Http\Controllers\Docente\CursoController::class, 'descargarListaPDF'])->name('docente.curso.lista.pdf');
     // ============================================
     // MÓDULO DOCENTE: PERFIL
     // ============================================

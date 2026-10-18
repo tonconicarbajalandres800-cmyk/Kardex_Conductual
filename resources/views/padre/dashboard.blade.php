@@ -19,14 +19,14 @@
     </div>
 
     <!-- Selector de hijo -->
-    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-5 rounded-2xl shadow-md mb-6 border border-indigo-100
+    <div class="bg-gradient-to-r from-blue-50 to-blue-100 p-5 rounded-2xl shadow-md mb-6 border border-blue-200
                 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
         <div class="flex flex-wrap items-center gap-4">
-            <label class="font-semibold text-indigo-800 text-lg dark:text-indigo-300 flex items-center gap-2">
+            <label class="font-semibold text-blue-900 text-lg dark:text-blue-300 flex items-center gap-2">
                 <i class="fi fi-sr-child"></i>
                 Seleccionar Hijo:
             </label>
-            <select id="hijo-select" class="border-2 border-indigo-200 rounded-xl px-4 py-2.5 w-64 bg-white/80 backdrop-blur-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all
+            <select id="hijo-select" class="border-2 border-blue-300 rounded-xl px-4 py-2.5 w-64 bg-white/90 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all
                        dark:bg-gray-900/80 dark:border-gray-600 dark:text-gray-100" onchange="window.location.href='{{ route('padre.dashboard') }}?hijo='+this.value">
                 @foreach($hijos as $h)
                     <option value="{{ $h->id }}" {{ $hijoSeleccionado && $hijoSeleccionado->id == $h->id ? 'selected' : '' }}>
@@ -47,7 +47,7 @@
         <!-- ========================================== -->
         <!-- INFORMACIÓN DEL ESTUDIANTE CON FOTO        -->
         <!-- ========================================== -->
-        <div class="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl shadow-lg mb-6 text-white">
+        <div class="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 p-6 rounded-2xl shadow-lg mb-6 text-white">
             <div class="flex items-center space-x-5">
                 @php
                     $fotoUrl = null;
@@ -63,17 +63,17 @@
                 @if($fotoUrl)
                     <img src="{{ $fotoUrl }}" 
                          alt="Foto de {{ $hijoSeleccionado->nombre }}" 
-                         class="w-20 h-20 rounded-full object-cover border-2 border-indigo-300 shadow-lg">
+                         class="w-20 h-20 rounded-full object-cover border-4 border-yellow-400 shadow-lg">
                 @else
-                    <div class="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-3xl shadow-lg">
+                    <div class="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-3xl border-4 border-yellow-400 shadow-lg">
                         {{ $hijoSeleccionado ? strtoupper(substr($hijoSeleccionado->nombre, 0, 1)) : '?' }}
                     </div>
                 @endif
                 <div>
-                    <h2 class="text-3xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                    <h2 class="text-3xl font-bold text-white">
                         {{ $hijoSeleccionado ? $hijoSeleccionado->nombre . ' ' . $hijoSeleccionado->apellido : 'Selecciona un hijo' }}
                     </h2>
-                    <p class="text-indigo-200 text-sm font-medium flex items-center gap-2 mt-1">
+                    <p class="text-blue-200 text-sm font-medium flex items-center gap-2 mt-1">
                         <i class="fi fi-sr-graduation-cap"></i>
                         {{ $hijoSeleccionado && $hijoSeleccionado->curso ? $hijoSeleccionado->curso->nombre . ' ' . $hijoSeleccionado->curso->paralelo : 'Sin curso' }}
                     </p>
@@ -84,32 +84,35 @@
         <!-- RESUMEN DEL ESTUDIANTE -->
         <div class="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-md border border-gray-200 mb-6
                     dark:bg-gray-800/90 dark:border-gray-700">
-            <h3 class="font-semibold text-gray-700 mb-4 text-lg flex items-center gap-2 dark:text-gray-200">
+            <h3 class="font-semibold text-gray-800 mb-4 text-lg flex items-center gap-2 dark:text-gray-200">
                 <i class="fi fi-sr-chart-histogram"></i>
                 RESUMEN DEL ESTUDIANTE
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                <!-- Total Faltas (Azul Institucional) -->
                 <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl text-center shadow-sm border border-blue-200
                             dark:from-blue-900/40 dark:to-blue-900/20 dark:border-blue-800">
-                    <span class="text-3xl font-bold text-blue-700 dark:text-blue-300">{{ $totalFaltas }}</span>
-                    <p class="text-sm text-gray-600 font-medium dark:text-gray-300">Total Faltas</p>
+                    <span class="text-3xl font-bold text-blue-800 dark:text-blue-300">{{ $totalFaltas }}</span>
+                    <p class="text-sm text-gray-700 font-medium dark:text-gray-300">Total Faltas</p>
                 </div>
-                <div class="bg-gradient-to-br from-rose-50 to-rose-100 p-4 rounded-xl text-center shadow-sm border border-rose-200
-                            dark:from-rose-900/40 dark:to-rose-900/20 dark:border-rose-800">
-                    <span class="text-3xl font-bold text-rose-700 dark:text-rose-300">{{ $faltasGraves }}</span>
-                    <p class="text-sm text-gray-600 font-medium dark:text-gray-300">Faltas Graves</p>
+                <!-- Faltas Graves (Rojo Alerta) -->
+                <div class="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-xl text-center shadow-sm border border-red-200
+                            dark:from-red-900/40 dark:to-red-900/20 dark:border-red-800">
+                    <span class="text-3xl font-bold text-red-700 dark:text-red-300">{{ $faltasGraves }}</span>
+                    <p class="text-sm text-gray-700 font-medium dark:text-gray-300">Faltas Graves</p>
                 </div>
-                <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-xl text-center shadow-sm border border-emerald-200
-                            dark:from-emerald-900/40 dark:to-emerald-900/20 dark:border-emerald-800">
-                    <span class="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{{ $faltasLeves }}</span>
-                    <p class="text-sm text-gray-600 font-medium dark:text-gray-300">Faltas Leves</p>
+                <!-- Faltas Leves (Amarillo Institucional) -->
+                <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 rounded-xl text-center shadow-sm border border-yellow-200
+                            dark:from-yellow-900/40 dark:to-yellow-900/20 dark:border-yellow-800">
+                    <span class="text-3xl font-bold text-yellow-700 dark:text-yellow-300">{{ $faltasLeves }}</span>
+                    <p class="text-sm text-gray-700 font-medium dark:text-gray-300">Faltas Leves</p>
                 </div>
             </div>
 
             <!-- Estado actual -->
             <div class="p-5 rounded-xl shadow-sm border
-                {{ $estado === 'Alerta' ? 'bg-gradient-to-r from-rose-50 to-rose-100 border-rose-300 dark:from-rose-900/40 dark:to-rose-900/20 dark:border-rose-700' : ($estado === 'Observación' ? 'bg-gradient-to-r from-amber-50 to-amber-100 border-amber-300 dark:from-amber-900/40 dark:to-amber-900/20 dark:border-amber-700' : 'bg-gradient-to-r from-emerald-50 to-emerald-100 border-emerald-300 dark:from-emerald-900/40 dark:to-emerald-900/20 dark:border-emerald-700') }}">
-                <p class="font-bold text-lg flex items-center gap-2 {{ $estado === 'Alerta' ? 'text-rose-700 dark:text-rose-300' : ($estado === 'Observación' ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300') }}">
+                {{ $estado === 'Alerta' ? 'bg-gradient-to-r from-red-50 to-red-100 border-red-300 dark:from-red-900/40 dark:to-red-900/20 dark:border-red-700' : ($estado === 'Observación' ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300 dark:from-yellow-900/40 dark:to-yellow-900/20 dark:border-yellow-700' : 'bg-gradient-to-r from-emerald-50 to-emerald-100 border-emerald-300 dark:from-emerald-900/40 dark:to-emerald-900/20 dark:border-emerald-700') }}">
+                <p class="font-bold text-lg flex items-center gap-2 {{ $estado === 'Alerta' ? 'text-red-700 dark:text-red-300' : ($estado === 'Observación' ? 'text-yellow-700 dark:text-yellow-300' : 'text-emerald-700 dark:text-emerald-300') }}">
                     <i class="{{ $estado === 'Alerta' ? 'fi fi-sr-triangle-warning' : ($estado === 'Observación' ? 'fi fi-sr-info' : 'fi fi-sr-check-circle') }}"></i>
                     ESTADO: {{ strtoupper($estado) }}
                 </p>
@@ -122,7 +125,7 @@
             <!-- Citaciones pendientes -->
             <div class="bg-white/90 backdrop-blur-sm p-5 rounded-2xl shadow-md border border-gray-200
                         dark:bg-gray-800/90 dark:border-gray-700">
-                <h3 class="font-semibold text-gray-700 mb-4 text-lg flex items-center gap-2 dark:text-gray-200">
+                <h3 class="font-semibold text-gray-800 mb-4 text-lg flex items-center gap-2 dark:text-gray-200">
                     <i class="fi fi-sr-calendar-clock"></i>
                     Citaciones Pendientes
                 </h3>
@@ -133,23 +136,23 @@
                     <div class="border-b border-gray-200 pb-3 mb-3 last:border-0 dark:border-gray-700">
                         <p class="font-semibold text-gray-800 dark:text-gray-100">{{ $citacion->estudiante->nombre }}</p>
                         <p class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                            <i class="fi fi-sr-calendar"></i>
+                            <i class="fi fi-sr-calendar text-blue-700 dark:text-blue-400"></i>
                             {{ \Carbon\Carbon::parse($citacion->fecha_programada)->format('d/m/Y H:i') }}
                         </p>
                         <p class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                            <i class="fi fi-sr-marker"></i>
+                            <i class="fi fi-sr-marker text-blue-700 dark:text-blue-400"></i>
                             {{ $citacion->motivo }}
                         </p>
                         <form method="POST" action="{{ route('padre.citacion.confirmar', $citacion->id) }}" class="mt-2">
                             @csrf
-                            <button type="submit" class="text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
+                            <button type="submit" class="text-sm bg-blue-700 hover:bg-blue-800 text-white px-4 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
                                 <i class="fi fi-sr-check"></i>
                                 Confirmar asistencia
                             </button>
                         </form>
                     </div>
                     @endforeach
-                    <a href="{{ route('padre.historial.citaciones') }}" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1">
+                    <a href="{{ route('padre.historial.citaciones') }}" class="text-sm text-blue-700 hover:text-blue-900 font-medium transition-colors dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1">
                         Ver todas las citaciones
                         <i class="fi fi-sr-arrow-right"></i>
                     </a>
@@ -159,7 +162,7 @@
             <!-- Próximas reuniones -->
             <div class="bg-white/90 backdrop-blur-sm p-5 rounded-2xl shadow-md border border-gray-200
                         dark:bg-gray-800/90 dark:border-gray-700">
-                <h3 class="font-semibold text-gray-700 mb-4 text-lg flex items-center gap-2 dark:text-gray-200">
+                <h3 class="font-semibold text-gray-800 mb-4 text-lg flex items-center gap-2 dark:text-gray-200">
                     <i class="fi fi-sr-marker"></i>
                     Próximas Reuniones
                 </h3>
@@ -170,15 +173,15 @@
                     <div class="border-b border-gray-200 pb-3 mb-3 last:border-0 dark:border-gray-700">
                         <p class="font-semibold text-gray-800 dark:text-gray-100">{{ $reunion->estudiante->nombre }}</p>
                         <p class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                            <i class="fi fi-sr-calendar"></i>
+                            <i class="fi fi-sr-calendar text-blue-700 dark:text-blue-400"></i>
                             {{ \Carbon\Carbon::parse($reunion->fecha_programada)->format('d/m/Y H:i') }}
                         </p>
                         <p class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                            <i class="fi fi-sr-marker"></i>
+                            <i class="fi fi-sr-marker text-blue-700 dark:text-blue-400"></i>
                             {{ $reunion->motivo }}
                         </p>
-                        <p class="text-xs text-gray-400 mt-1 dark:text-gray-500 flex items-center gap-1">
-                            <i class="fi fi-sr-marker"></i>
+                        <p class="text-xs text-gray-500 mt-1 dark:text-gray-500 flex items-center gap-1">
+                            <i class="fi fi-sr-building"></i>
                             Dirección del colegio
                         </p>
                     </div>
@@ -190,13 +193,13 @@
         <!-- Historial de incidencias -->
         <div class="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-md border border-gray-200
                     dark:bg-gray-800/90 dark:border-gray-700">
-            <h3 class="font-semibold text-gray-700 mb-4 text-lg flex items-center gap-2 dark:text-gray-200">
+            <h3 class="font-semibold text-gray-800 mb-4 text-lg flex items-center gap-2 dark:text-gray-200">
                 <i class="fi fi-sr-document"></i>
                 Últimas Incidencias
             </h3>
             <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
                 <table class="w-full text-sm">
-                    <thead class="bg-gradient-to-r from-gray-800 to-gray-900 text-white">
+                    <thead class="bg-blue-800 text-white">
                         <tr>
                             <th class="text-left py-3 px-4 font-semibold">N°</th>
                             <th class="text-left py-3 px-4 font-semibold">FECHA</th>
@@ -207,14 +210,14 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-800/90">
                         @forelse($historialIncidencias as $index => $inc)
-                        <tr class="hover:bg-gray-50 transition-colors dark:hover:bg-gray-700/60">
+                        <tr class="hover:bg-blue-50 transition-colors dark:hover:bg-gray-700/60">
                             <td class="py-3 px-4 text-gray-700 dark:text-gray-300">{{ $index + 1 }}</td>
                             <td class="py-3 px-4 text-gray-700 dark:text-gray-300">{{ $inc->created_at->format('d/m/Y') }}</td>
                             <td class="py-3 px-4">
                                 <span class="px-3 py-1 rounded-full text-xs font-semibold 
                                     {{ in_array($inc->tipo, ['Indisciplina', 'Falto a clases', 'Sin uniforme']) 
-                                        ? 'bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-700' 
-                                        : 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700' }}">
+                                        ? 'bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700' 
+                                        : 'bg-yellow-100 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700' }}">
                                     {{ $inc->tipo }}
                                 </span>
                             </td>
@@ -238,7 +241,7 @@
                 </table>
             </div>
             <div class="mt-4 text-right">
-                <a href="{{ route('padre.kardex', $hijoSeleccionado->id) }}" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg inline-flex items-center gap-2 transition-colors shadow-sm">
+                <a href="{{ route('padre.kardex', $hijoSeleccionado->id) }}" class="text-sm bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg inline-flex items-center gap-2 transition-colors shadow-sm">
                     <i class="fi fi-sr-document"></i>
                     Ver historial completo
                     <i class="fi fi-sr-arrow-right"></i>

@@ -13,6 +13,8 @@ use App\Models\User;
 use App\Models\FotoEstudiante;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class UsuarioController extends Controller
 {
@@ -39,59 +41,79 @@ class UsuarioController extends Controller
         }
 
         $usuarios = $query->orderBy('id', 'desc')->paginate(15);
-        $roles = ['admin', 'docente', 'padre', 'estudiante', 'regente']; // AGREGADO regente
+        $roles = ['admin', 'docente', 'padre', 'estudiante', 'regente'];
         $estados = ['activo', 'inactivo', 'suspendido'];
 
         $cursos = Curso::orderBy('nombre')->orderBy('paralelo')->get();
-        
+
         return view('admin.usuarios.index', compact('usuarios', 'roles', 'estados', 'cursos'));
     }
 
     public function create()
     {
         $cursos = Curso::all();
-        $padres = Padre::with('user')->get(); 
+        $padres = Padre::with('user')->get();
         return view('admin.usuarios.create', compact('cursos', 'padres'));
     }
 
     public function store(Request $request)
     {
+        // ==========================================
+        // VALIDACIÓN SEGÚN EL ROL
+        // ==========================================
         if ($request->rol === 'estudiante') {
             $validated = $request->validate([
                 'rol' => 'required|in:estudiante',
-                'padre_nombre' => 'required|string|max:255',
-                'padre_apellidos' => 'nullable|string|max:255',
-                'padre_telefono' => 'required|string|max:20',
-                'padre_email' => 'required|email|max:255',
-                'password' => 'nullable|min:8',
-                'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-                'hermanos' => 'nullable|array',
+                'padres' => 'required|array|min:1',
+                'padres.*.nombre' => 'required|string|max:255',
+                'padres.*.apellidos' => 'nullable|string|max:255',
+                'padres.*.email' => 'required|email|max:255',
+                'padres.*.telefono' => 'required|string|max:20',
+                'padres.*.relacion' => 'nullable|in:padre,madre,tutor,otro',
+                'padres.*.password' => 'nullable|min:8',
+                'hermanos' => 'required|array|min:1',
                 'hermanos.*.nombre' => 'required|string|max:255',
                 'hermanos.*.apellidos' => 'required|string|max:255',
                 'hermanos.*.ci' => 'required|string|max:20',
                 'hermanos.*.fecha_nacimiento' => 'nullable|date',
                 'hermanos.*.curso' => 'nullable|exists:cursos,id',
                 'hermanos.*.numero_lista' => 'nullable|integer|min:1',
+                'hermanos.*.foto' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+                'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            ], [
+                'padres.required' => 'Debes registrar al menos un padre/madre.',
+                'padres.*.nombre.required' => 'El nombre del padre es obligatorio.',
+                'padres.*.email.required' => 'El email del padre es obligatorio.',
+                'padres.*.email.email' => 'El email del padre no es válido.',
+                'padres.*.telefono.required' => 'El teléfono del padre es obligatorio.',
+                'hermanos.required' => 'Debes registrar al menos un estudiante.',
+                'hermanos.*.nombre.required' => 'El nombre del estudiante es obligatorio.',
+                'hermanos.*.apellidos.required' => 'Los apellidos del estudiante son obligatorios.',
+                'hermanos.*.ci.required' => 'El CI del estudiante es obligatorio.',
+                'hermanos.*.foto.image' => 'La foto del estudiante debe ser una imagen.',
+                'hermanos.*.foto.max' => 'La foto del estudiante no debe superar 5MB.',
             ]);
 
-            $padreExistente = User::where('email', $request->padre_email)->first();
-            if ($padreExistente) {
-                return back()->with('error', '❌ El email del padre ya está registrado. Usa otro email o asigna un padre existente.')
-                    ->withInput();
-            }
-
-            if ($request->has('hermanos') && is_array($request->hermanos)) {
-                foreach ($request->hermanos as $hijo) {
-                    $estudianteExistente = User::where('ci', $hijo['ci'])->first();
-                    if ($estudianteExistente) {
-                        return back()->with('error', '❌ El CI del estudiante ' . $hijo['nombre'] . ' ya está registrado. Usa otro CI.')
-                            ->withInput();
-                    }
+            // Validar emails de padres únicos
+            foreach ($request->padres ?? [] as $p) {
+                if (User::where('email', $p['email'])->exists()) {
+                    return back()->with('error', '❌ El email ' . $p['email'] . ' ya está registrado.')->withInput();
                 }
             }
 
+            // Validar CI de estudiantes únicos
+            foreach ($request->hermanos ?? [] as $h) {
+                if (User::where('ci', $h['ci'])->exists()) {
+                    return back()->with('error', '❌ El CI ' . $h['ci'] . ' ya está registrado.')->withInput();
+                }
+            }
+
+            // Validar CI duplicados
+            $cis = collect($request->hermanos ?? [])->pluck('ci')->filter()->toArray();
+            if (count($cis) !== count(array_unique($cis))) {
+                return back()->with('error', '❌ Hay CI repetidos entre los estudiantes.')->withInput();
+            }
         } else {
-            // ⭐⭐⭐ VALIDACIÓN CON REGENTE ⭐⭐⭐
             $validated = $request->validate([
                 'rol' => 'required|in:admin,docente,padre,regente',
                 'nombre' => 'required|string|max:255',
@@ -101,8 +123,9 @@ class UsuarioController extends Controller
                 'telefono' => 'required|string|max:20',
                 'direccion' => 'nullable|string|max:255',
                 'password' => 'nullable|min:8',
-                'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-                'materia' => 'nullable|string|max:100',
+                'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+                'materias' => 'nullable|array', // ✅ VALIDACIÓN DE ARRAY
+                'materias.*' => 'nullable|string|max:100',
                 'es_encargado' => 'nullable|boolean',
                 'curso_encargado' => 'nullable|exists:cursos,id',
             ]);
@@ -112,35 +135,55 @@ class UsuarioController extends Controller
         // 1. ROL: ESTUDIANTE
         // ==========================================
         if ($request->rol === 'estudiante') {
-            $userPadre = User::create([
-                'nombre' => $request->padre_nombre,
-                'apellidos' => $request->padre_apellidos ?? '',
-                'ci' => 'P' . uniqid(),
-                'rol' => 'padre',
-                'email' => $request->padre_email,
-                'telefono' => $request->padre_telefono,
-                'password' => Hash::make($request->password ?? 'password123'),
-                'estado' => 'activo',
-                'foto' => null,
-            ]);
+            DB::beginTransaction();
+            try {
+                $padresCreados = [];
 
-            $padre = Padre::create([
-                'user_id' => $userPadre->id,
-                'nombre' => $request->padre_nombre,
-                'apellido' => $request->padre_apellidos ?? '',
-                'telefono' => $request->padre_telefono,
-                'email_secundario' => $request->padre_email,
-            ]);
+                foreach ($request->padres ?? [] as $index => $p) {
+                    $ciPadre = 'P' . substr(uniqid(), -10) . rand(10, 99);
+                    $ciPadre = substr($ciPadre, 0, 20);
 
-            if ($request->has('hermanos') && is_array($request->hermanos)) {
-                foreach ($request->hermanos as $hijo) {
+                    $userPadre = User::create([
+                        'nombre' => $p['nombre'],
+                        'apellidos' => $p['apellidos'] ?? '',
+                        'ci' => $ciPadre,
+                        'rol' => 'padre',
+                        'email' => $p['email'],
+                        'telefono' => $p['telefono'],
+                        'password' => Hash::make($p['password'] ?? 'password123'),
+                        'estado' => 'activo',
+                        'foto' => null,
+                    ]);
+
+                    $padre = Padre::create([
+                        'user_id' => $userPadre->id,
+                        'nombre' => $p['nombre'],
+                        'apellido' => $p['apellidos'] ?? '',
+                        'telefono' => $p['telefono'],
+                        'email_secundario' => $p['email'],
+                    ]);
+
+                    $padresCreados[] = $padre;
+                }
+
+                if (empty($padresCreados)) {
+                    DB::rollBack();
+                    return back()->with('error', '❌ Debes registrar al menos un padre/madre.')->withInput();
+                }
+
+                $padrePrincipal = $padresCreados[0];
+
+                foreach ($request->hermanos ?? [] as $index => $hijo) {
+                    $emailEstudiante = 'est.' . $hijo['ci'] . '.' . uniqid() . '@estudiante.com';
+                    $emailEstudiante = substr($emailEstudiante, 0, 100);
+
                     $userEst = User::create([
                         'nombre' => $hijo['nombre'],
                         'apellidos' => $hijo['apellidos'],
                         'ci' => $hijo['ci'],
                         'rol' => 'estudiante',
-                        'email' => $hijo['ci'] . '@estudiante.com',
-                        'telefono' => $request->padre_telefono,
+                        'email' => $emailEstudiante,
+                        'telefono' => $padrePrincipal->telefono ?? null,
                         'password' => Hash::make('password'),
                         'estado' => 'activo',
                         'foto' => null,
@@ -153,126 +196,228 @@ class UsuarioController extends Controller
                         'ci' => $hijo['ci'],
                         'fecha_nacimiento' => $hijo['fecha_nacimiento'] ?? null,
                         'curso_id' => $hijo['curso'] ?? null,
-                        'padre_id' => $padre->id,
+                        'padre_id' => $padrePrincipal->id,
                         'numero_lista' => $hijo['numero_lista'] ?? null,
                         'direccion' => $request->direccion ?? null,
                     ]);
 
-                    if ($request->hasFile('foto')) {
-                        $nombreArchivo = uniqid() . '_' . time() . '.' . $request->foto->extension();
-                        $request->foto->move(public_path('images/storage/fotos'), $nombreArchivo);
+                    $rutaFoto = null;
+
+                    if ($request->hasFile("hermanos.{$index}.foto")) {
+                        $archivo = $request->file("hermanos.{$index}.foto");
+                        $nombreArchivo = uniqid() . '_' . time() . '.' . $archivo->getClientOriginalExtension();
+                        $destino = public_path('images/storage/fotos');
+                        if (!file_exists($destino)) mkdir($destino, 0777, true);
+                        $archivo->move($destino, $nombreArchivo);
+                        $rutaFoto = 'images/storage/fotos/' . $nombreArchivo;
+
                         FotoEstudiante::create([
                             'estudiante_id' => $estudiante->id,
                             'nombre_archivo' => $nombreArchivo,
-                            'ruta' => 'images/storage/fotos/' . $nombreArchivo
+                            'ruta' => $rutaFoto,
                         ]);
+
+                        $userEst->update(['foto' => $rutaFoto]);
+                    } elseif ($index === 0 && $request->hasFile('foto')) {
+                        $archivo = $request->file('foto');
+                        $nombreArchivo = uniqid() . '_' . time() . '.' . $archivo->getClientOriginalExtension();
+                        $destino = public_path('images/storage/fotos');
+                        if (!file_exists($destino)) mkdir($destino, 0777, true);
+                        $archivo->move($destino, $nombreArchivo);
+                        $rutaFoto = 'images/storage/fotos/' . $nombreArchivo;
+
+                        FotoEstudiante::create([
+                            'estudiante_id' => $estudiante->id,
+                            'nombre_archivo' => $nombreArchivo,
+                            'ruta' => $rutaFoto,
+                        ]);
+
+                        $userEst->update(['foto' => $rutaFoto]);
                     }
                 }
-            }
 
-            return redirect()->route('admin.usuarios.index')
-                ->with('success', '✅ Padre y estudiante(s) creados correctamente.');
+                DB::commit();
+                return redirect()->route('admin.usuarios.index')->with('success', '✅ Padre(s) y estudiante(s) creados correctamente.');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Error al crear estudiante: ' . $e->getMessage());
+                return back()->with('error', '❌ Error al crear: ' . $e->getMessage())->withInput();
+            }
         }
 
         // ==========================================
         // 2. ROL: DOCENTE
         // ==========================================
         if ($request->rol === 'docente') {
-            $user = User::create([
-                'nombre' => $request->nombre,
-                'apellidos' => $request->apellidos,
-                'ci' => $request->ci,
-                'rol' => 'docente',
-                'email' => $request->email,
-                'telefono' => $request->telefono,
-                'password' => Hash::make($request->password ?? 'password123'),
-                'estado' => 'activo',
-                'foto' => $request->file('foto') ? $request->file('foto')->store('fotos', 'public') : null,
-            ]);
+            DB::beginTransaction();
+            try {
+                $rutaFoto = null;
+                if ($request->hasFile('foto')) {
+                    $archivo = $request->file('foto');
+                    $nombreArchivo = uniqid() . '_' . time() . '.' . $archivo->getClientOriginalExtension();
+                    $destino = public_path('images/storage/fotos');
+                    if (!file_exists($destino)) mkdir($destino, 0777, true);
+                    $archivo->move($destino, $nombreArchivo);
+                    $rutaFoto = 'images/storage/fotos/' . $nombreArchivo;
+                }
 
-            Docente::create([
-                'user_id' => $user->id,
-                'especialidad' => $request->materia ?? null,
-                'telefono' => $request->telefono,
-                'email' => $request->email,
-                'es_encargado' => $request->has('es_encargado') ? true : false,
-                'curso_encargado_id' => $request->curso_encargado ?? null,
-            ]);
+                $user = User::create([
+                    'nombre' => $request->nombre,
+                    'apellidos' => $request->apellidos,
+                    'ci' => $request->ci,
+                    'rol' => 'docente',
+                    'email' => $request->email,
+                    'telefono' => $request->telefono,
+                    'direccion' => $request->direccion ?? null,
+                    'password' => Hash::make($request->password ?? 'password123'),
+                    'estado' => 'activo',
+                    'foto' => $rutaFoto,
+                ]);
 
-            return redirect()->route('admin.usuarios.index')
-                ->with('success', '✅ Docente creado correctamente.');
+                // ✅ LIMPIAMOS EL ARRAY Y LO GUARDAMOS
+                $materiasFiltradas = [];
+                if ($request->has('materias') && is_array($request->materias)) {
+                    $materiasFiltradas = array_values(array_filter($request->materias, function($m) {
+                        return !empty($m);
+                    }));
+                }
+
+                Docente::create([
+                    'user_id' => $user->id,
+                    'especialidad' => $materiasFiltradas[0] ?? null, 
+                    'materias' => $materiasFiltradas, // El modelo lo castea a JSON solo
+                    'telefono' => $request->telefono,
+                    'email' => $request->email,
+                    'es_encargado' => $request->has('es_encargado') ? true : false,
+                    'curso_encargado_id' => $request->curso_encargado ?? null,
+                ]);
+
+                DB::commit();
+                return redirect()->route('admin.usuarios.index')->with('success', '✅ Docente creado correctamente.');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Error al crear docente: ' . $e->getMessage());
+                return back()->with('error', '❌ Error al crear docente: ' . $e->getMessage())->withInput();
+            }
         }
 
         // ==========================================
         // 3. ROL: PADRE
         // ==========================================
         if ($request->rol === 'padre') {
-            $user = User::create([
-                'nombre' => $request->nombre,
-                'apellidos' => $request->apellidos,
-                'ci' => $request->ci,
-                'rol' => 'padre',
-                'email' => $request->email,
-                'telefono' => $request->telefono,
-                'password' => Hash::make($request->password),
-                'foto' => $request->file('foto') ? $request->file('foto')->store('fotos', 'public') : null,
-                'estado' => 'activo',
-            ]);
+            DB::beginTransaction();
+            try {
+                $rutaFoto = null;
+                if ($request->hasFile('foto')) {
+                    $archivo = $request->file('foto');
+                    $nombreArchivo = uniqid() . '_' . time() . '.' . $archivo->getClientOriginalExtension();
+                    $destino = public_path('images/storage/fotos');
+                    if (!file_exists($destino)) mkdir($destino, 0777, true);
+                    $archivo->move($destino, $nombreArchivo);
+                    $rutaFoto = 'images/storage/fotos/' . $nombreArchivo;
+                }
 
-            Padre::create([
-                'user_id' => $user->id,
-                'nombre' => $request->nombre,
-                'apellido' => $request->apellidos,
-                'telefono' => $request->telefono,
-                'email_secundario' => $request->email,
-            ]);
+                $user = User::create([
+                    'nombre' => $request->nombre,
+                    'apellidos' => $request->apellidos,
+                    'ci' => $request->ci,
+                    'rol' => 'padre',
+                    'email' => $request->email,
+                    'telefono' => $request->telefono,
+                    'direccion' => $request->direccion ?? null,
+                    'password' => Hash::make($request->password ?? 'password123'),
+                    'foto' => $rutaFoto,
+                    'estado' => 'activo',
+                ]);
 
-            return redirect()->route('admin.usuarios.index')
-                ->with('success', '✅ Padre creado correctamente.');
+                Padre::create([
+                    'user_id' => $user->id,
+                    'nombre' => $request->nombre,
+                    'apellido' => $request->apellidos,
+                    'telefono' => $request->telefono,
+                    'email_secundario' => $request->email,
+                ]);
+
+                DB::commit();
+                return redirect()->route('admin.usuarios.index')->with('success', '✅ Padre creado correctamente.');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Error al crear padre: ' . $e->getMessage());
+                return back()->with('error', '❌ Error al crear padre: ' . $e->getMessage())->withInput();
+            }
         }
 
         // ==========================================
         // 4. ROL: ADMIN
         // ==========================================
         if ($request->rol === 'admin') {
-            $user = User::create([
-                'nombre' => $request->nombre,
-                'apellidos' => $request->apellidos,
-                'ci' => $request->ci,
-                'rol' => 'admin',
-                'email' => $request->email,
-                'telefono' => $request->telefono,
-                'password' => Hash::make($request->password),
-                'foto' => $request->file('foto') ? $request->file('foto')->store('fotos', 'public') : null,
-                'estado' => 'activo',
-            ]);
+            try {
+                $rutaFoto = null;
+                if ($request->hasFile('foto')) {
+                    $archivo = $request->file('foto');
+                    $nombreArchivo = uniqid() . '_' . time() . '.' . $archivo->getClientOriginalExtension();
+                    $destino = public_path('images/storage/fotos');
+                    if (!file_exists($destino)) mkdir($destino, 0777, true);
+                    $archivo->move($destino, $nombreArchivo);
+                    $rutaFoto = 'images/storage/fotos/' . $nombreArchivo;
+                }
 
-            return redirect()->route('admin.usuarios.index')
-                ->with('success', '✅ Administrador creado correctamente.');
+                User::create([
+                    'nombre' => $request->nombre,
+                    'apellidos' => $request->apellidos,
+                    'ci' => $request->ci,
+                    'rol' => 'admin',
+                    'email' => $request->email,
+                    'telefono' => $request->telefono,
+                    'direccion' => $request->direccion ?? null,
+                    'password' => Hash::make($request->password ?? 'password123'),
+                    'foto' => $rutaFoto,
+                    'estado' => 'activo',
+                ]);
+
+                return redirect()->route('admin.usuarios.index')->with('success', '✅ Administrador creado correctamente.');
+            } catch (\Exception $e) {
+                Log::error('Error al crear admin: ' . $e->getMessage());
+                return back()->with('error', '❌ Error al crear administrador: ' . $e->getMessage())->withInput();
+            }
         }
 
         // ==========================================
-        // 5. ROL: REGENTE (NUEVO)
+        // 5. ROL: REGENTE
         // ==========================================
         if ($request->rol === 'regente') {
-            $user = User::create([
-                'nombre' => $request->nombre,
-                'apellidos' => $request->apellidos,
-                'ci' => $request->ci,
-                'rol' => 'regente',
-                'email' => $request->email,
-                'telefono' => $request->telefono,
-                'password' => Hash::make($request->password),
-                'foto' => $request->file('foto') ? $request->file('foto')->store('fotos', 'public') : null,
-                'estado' => 'activo',
-            ]);
+            try {
+                $rutaFoto = null;
+                if ($request->hasFile('foto')) {
+                    $archivo = $request->file('foto');
+                    $nombreArchivo = uniqid() . '_' . time() . '.' . $archivo->getClientOriginalExtension();
+                    $destino = public_path('images/storage/fotos');
+                    if (!file_exists($destino)) mkdir($destino, 0777, true);
+                    $archivo->move($destino, $nombreArchivo);
+                    $rutaFoto = 'images/storage/fotos/' . $nombreArchivo;
+                }
 
-            return redirect()->route('admin.usuarios.index')
-                ->with('success', '✅ Regente creado correctamente.');
+                User::create([
+                    'nombre' => $request->nombre,
+                    'apellidos' => $request->apellidos,
+                    'ci' => $request->ci,
+                    'rol' => 'regente',
+                    'email' => $request->email,
+                    'telefono' => $request->telefono,
+                    'direccion' => $request->direccion ?? null,
+                    'password' => Hash::make($request->password ?? 'password123'),
+                    'foto' => $rutaFoto,
+                    'estado' => 'activo',
+                ]);
+
+                return redirect()->route('admin.usuarios.index')->with('success', '✅ Regente creado correctamente.');
+            } catch (\Exception $e) {
+                Log::error('Error al crear regente: ' . $e->getMessage());
+                return back()->with('error', '❌ Error al crear regente: ' . $e->getMessage())->withInput();
+            }
         }
 
-        return redirect()->route('admin.usuarios.index')
-            ->with('error', '❌ Rol no válido.');
+        return redirect()->route('admin.usuarios.index')->with('error', '❌ Rol no válido.');
     }
 
     public function edit($id)
@@ -302,7 +447,6 @@ class UsuarioController extends Controller
     {
         $usuario = User::findOrFail($id);
 
-        // ⭐⭐⭐ VALIDACIÓN CON REGENTE ⭐⭐⭐
         $validated = $request->validate([
             'nombre' => 'required|string|max:255',
             'apellidos' => 'required|string|max:255',
@@ -312,7 +456,8 @@ class UsuarioController extends Controller
             'numero_lista' => 'nullable|integer|min:1',
             'direccion' => 'nullable|string|max:255',
             'curso' => 'nullable|exists:cursos,id',
-            'materia' => 'nullable|string|max:100',
+            'materias' => 'nullable|array', // ✅ VALIDACIÓN DE ARRAY
+            'materias.*' => 'nullable|string|max:100',
             'es_encargado' => 'nullable|boolean',
             'curso_encargado' => 'nullable|exists:cursos,id',
             'telefono' => 'required|string|max:20',
@@ -334,16 +479,18 @@ class UsuarioController extends Controller
 
         if ($request->hasFile('foto')) {
             $nombreArchivo = uniqid() . '_' . time() . '.' . $request->foto->extension();
-            $request->foto->move(public_path('images/storage/fotos'), $nombreArchivo);
-            
+            $destino = public_path('images/storage/fotos');
+            if (!file_exists($destino)) mkdir($destino, 0777, true);
+            $request->foto->move($destino, $nombreArchivo);
+
             if ($usuario->rol === 'estudiante' && $usuario->estudiante) {
                 FotoEstudiante::create([
                     'estudiante_id' => $usuario->estudiante->id,
                     'nombre_archivo' => $nombreArchivo,
-                    'ruta' => 'images/storage/fotos/' . $nombreArchivo
+                    'ruta' => 'images/storage/fotos/' . $nombreArchivo,
                 ]);
             }
-            
+
             $data['foto'] = 'images/storage/fotos/' . $nombreArchivo;
         }
 
@@ -359,15 +506,12 @@ class UsuarioController extends Controller
                     'curso_id' => $validated['curso'] ?? null,
                 ]);
 
-                if ($request->filled('padre_nombre')) {
-                    if ($estudiante->padre) {
-                        $padre = $estudiante->padre;
-                        $padre->update([
-                            'nombre' => $request->padre_nombre,
-                            'telefono' => $request->padre_telefono,
-                            'email_secundario' => $request->padre_email,
-                        ]);
-                    }
+                if ($request->filled('padre_nombre') && $estudiante->padre) {
+                    $estudiante->padre->update([
+                        'nombre' => $request->padre_nombre,
+                        'telefono' => $request->padre_telefono,
+                        'email_secundario' => $request->padre_email,
+                    ]);
                 }
             }
         }
@@ -375,8 +519,17 @@ class UsuarioController extends Controller
         if ($validated['rol'] === 'docente') {
             $docente = Docente::where('user_id', $usuario->id)->first();
             if ($docente) {
+                // ✅ ACTUALIZAMOS EL ARRAY DE MATERIAS
+                $materiasFiltradas = [];
+                if ($request->has('materias') && is_array($request->materias)) {
+                    $materiasFiltradas = array_values(array_filter($request->materias, function($m) {
+                        return !empty($m);
+                    }));
+                }
+
                 $docente->update([
-                    'especialidad' => $validated['materia'] ?? null,
+                    'especialidad' => $materiasFiltradas[0] ?? null,
+                    'materias' => $materiasFiltradas, // El modelo lo guarda como JSON
                     'telefono' => $validated['telefono'],
                     'email' => $validated['email'],
                     'es_encargado' => $request->has('es_encargado') ? true : false,
@@ -385,8 +538,7 @@ class UsuarioController extends Controller
             }
         }
 
-        return redirect()->route('admin.usuarios.index')
-            ->with('success', '✅ Usuario actualizado correctamente.');
+        return redirect()->route('admin.usuarios.index')->with('success', '✅ Usuario actualizado correctamente.');
     }
 
     public function destroy($id)
@@ -431,7 +583,6 @@ class UsuarioController extends Controller
 
         $usuario->delete();
 
-        return redirect()->route('admin.usuarios.index')
-            ->with('success', '✅ Usuario eliminado correctamente.');
+        return redirect()->route('admin.usuarios.index')->with('success', '✅ Usuario eliminado correctamente.');
     }
 }

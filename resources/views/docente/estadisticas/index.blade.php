@@ -30,25 +30,67 @@
         </div>
     </div>
 
-    <!-- SELECTOR DE CURSO -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-7 border border-gray-200 dark:border-gray-700">
+    <!-- SELECTOR DE CURSO (NUEVO DISEÑO CUADRADO) -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-7 border border-gray-200 dark:border-gray-700 relative z-20">
         <div class="flex items-center space-x-4 flex-wrap gap-3">
             <label class="font-black text-blue-900 dark:text-blue-200 text-sm tracking-wide flex items-center gap-2">
                 <i class="fi fi-sr-book"></i>
                 SELECCIONAR CURSO:
             </label>
-            <select id="curso-select" 
-                    class="border-2 border-blue-200 dark:border-gray-600 rounded-xl px-5 py-3.5 w-64 bg-blue-50 dark:bg-gray-700 font-semibold text-gray-800 dark:text-gray-100 focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition shadow-inner">
-                @foreach($cursos->sortBy(function($c) {
-                    $ordenNivel = ['1ro' => 1, '2do' => 2, '3ro' => 3, '4to' => 4, '5to' => 5, '6to' => 6];
-                    $nivel = explode(' ', $c->nombre)[0] ?? '0';
-                    return ($ordenNivel[$nivel] ?? 99) . '-' . $c->paralelo;
-                }) as $c)
-                    <option value="{{ $c->id }}" {{ $curso && $curso->id == $c->id ? 'selected' : '' }}>
-                        {{ $c->nombre }} {{ $c->paralelo }} - {{ $c->gestion }}
-                    </option>
-                @endforeach
-            </select>
+            
+            <!-- DROPDOWN PERSONALIZADO -->
+            <div class="relative" id="custom-dropdown-container">
+                <!-- Botón que abre el menú -->
+                <button type="button" onclick="toggleCustomDropdown()" 
+                        class="flex items-center justify-between w-72 border-2 border-blue-200 dark:border-gray-600 rounded-xl px-5 py-3.5 bg-blue-50 dark:bg-gray-700 font-semibold text-gray-800 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-gray-600 transition shadow-inner">
+                    <span class="flex items-center gap-2">
+                        <i class="fi fi-sr-graduation-cap text-blue-700 dark:text-blue-400"></i>
+                        {{ $curso->nombre ?? 'Seleccione' }} {{ $curso->paralelo ?? '' }}
+                    </span>
+                    <i class="fi fi-sr-angle-down text-gray-500 transition-transform duration-300" id="dropdown-icon"></i>
+                </button>
+
+                <!-- Menú Desplegable Cuadrado -->
+                <div id="custom-dropdown-menu" class="hidden absolute left-0 mt-2 w-[500px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-2xl shadow-2xl p-4 grid grid-cols-3 gap-3 max-h-[350px] overflow-y-auto">
+                    @php
+                        // Diccionario para ordenar correctamente los niveles
+                        $ordenNivel = [
+                            '1ro' => 1, '1er' => 1, 'Primero' => 1,
+                            '2do' => 2, 'Segundo' => 2,
+                            '3ro' => 3, 'Tercero' => 3,
+                            '4to' => 4, 'Cuarto' => 4,
+                            '5to' => 5, 'Quinto' => 5,
+                            '6to' => 6, 'Sexto' => 6
+                        ];
+                        
+                        // Ordenamos los cursos
+                        $cursosOrdenados = $cursos->sortBy(function($c) use ($ordenNivel) {
+                            $nivel = explode(' ', $c->nombre)[0] ?? '0';
+                            return ($ordenNivel[$nivel] ?? 99) . '-' . $c->paralelo;
+                        });
+                    @endphp
+
+                    @foreach($cursosOrdenados as $c)
+                        <a href="{{ route('docente.estadisticas.index') }}?curso={{ $c->id }}"
+                           class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 
+                           {{ $curso && $curso->id == $c->id 
+                               ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 shadow-md transform scale-105' 
+                               : 'border-gray-200 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                            
+                            <span class="text-xl font-black {{ $curso && $curso->id == $c->id ? 'text-blue-800 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200' }}">
+                                {{ $c->nombre }}
+                            </span>
+                                                       <span class="text-sm font-black mt-1.5 px-3 py-0.5 rounded-full shadow-sm transition-colors
+                                {{ $curso && $curso->id == $c->id 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-blue-100 text-blue-800 dark:bg-gray-600 dark:text-gray-200' }}">
+                                {{ $c->paralelo }}
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+
             <span class="text-sm text-blue-700 dark:text-blue-300 font-semibold bg-blue-100 dark:bg-blue-900/40 px-5 py-2.5 rounded-full shadow-sm flex items-center gap-2">
                 <i class="fi fi-sr-users"></i>
                 Total estudiantes: <strong class="text-blue-900 dark:text-blue-200">{{ $totalEstudiantes }}</strong>
@@ -57,7 +99,7 @@
     </div>
 
     <!-- TARJETAS DE ESTADÍSTICAS -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-7">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-7 relative z-10">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-t-4 border-blue-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
             <div class="flex items-center justify-between">
                 <span class="text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-wider">Incidencias Totales</span>
@@ -322,31 +364,41 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Selector de curso
-        const cursoSelect = document.getElementById('curso-select');
-        if (cursoSelect) {
-            cursoSelect.addEventListener('change', function() {
-                window.location.href = '{{ route('docente.estadisticas.index') }}?curso=' + this.value;
-            });
+    // ============================================
+    // FUNCIONES PARA EL NUEVO DROPDOWN PERSONALIZADO
+    // ============================================
+    function toggleCustomDropdown() {
+        const menu = document.getElementById('custom-dropdown-menu');
+        const icon = document.getElementById('dropdown-icon');
+        
+        if (menu.classList.contains('hidden')) {
+            menu.classList.remove('hidden');
+            icon.style.transform = 'rotate(180deg)';
+        } else {
+            menu.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
         }
+    }
 
+    // Cerrar el menú si se hace clic fuera de él
+    window.addEventListener('click', function(e) {
+        const container = document.getElementById('custom-dropdown-container');
+        const menu = document.getElementById('custom-dropdown-menu');
+        const icon = document.getElementById('dropdown-icon');
+        
+        if (container && !container.contains(e.target)) {
+            menu.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
         // ============================================
         // PALETA INSTITUCIONAL
         // ============================================
         const paletaInstitucional = [
-            '#1e3a8a', // azul oscuro
-            '#1d4ed8', // azul
-            '#2563eb', // azul medio
-            '#3b82f6', // azul claro
-            '#0ea5e9', // sky
-            '#06b6d4', // cyan
-            '#facc15', // amarillo
-            '#eab308', // amarillo oscuro
-            '#f59e0b', // amber
-            '#dc2626', // rojo
-            '#16a34a', // verde
-            '#7c3aed', // violeta
+            '#1e3a8a', '#1d4ed8', '#2563eb', '#3b82f6', '#0ea5e9', '#06b6d4',
+            '#facc15', '#eab308', '#f59e0b', '#dc2626', '#16a34a', '#7c3aed',
         ];
 
         // ============================================
@@ -372,9 +424,7 @@
                     maintainAspectRatio: false,
                     cutout: '60%',
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             backgroundColor: '#1e3a8a',
                             titleColor: '#ffffff',
@@ -382,13 +432,8 @@
                             borderColor: '#facc15',
                             borderWidth: 2,
                             padding: 12,
-                            titleFont: {
-                                size: 14,
-                                weight: 'bold'
-                            },
-                            bodyFont: {
-                                size: 13
-                            },
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 },
                             callbacks: {
                                 label: function(context) {
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
@@ -399,10 +444,7 @@
                             }
                         }
                     },
-                    animation: {
-                        animateScale: true,
-                        animateRotate: true
-                    }
+                    animation: { animateScale: true, animateRotate: true }
                 }
             });
         }
@@ -431,9 +473,7 @@
                     maintainAspectRatio: false,
                     cutout: '60%',
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             backgroundColor: '#1e3a8a',
                             titleColor: '#ffffff',
@@ -441,13 +481,8 @@
                             borderColor: '#facc15',
                             borderWidth: 2,
                             padding: 12,
-                            titleFont: {
-                                size: 14,
-                                weight: 'bold'
-                            },
-                            bodyFont: {
-                                size: 13
-                            },
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 },
                             callbacks: {
                                 label: function(context) {
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
@@ -458,10 +493,7 @@
                             }
                         }
                     },
-                    animation: {
-                        animateScale: true,
-                        animateRotate: true
-                    }
+                    animation: { animateScale: true, animateRotate: true }
                 }
             });
         }

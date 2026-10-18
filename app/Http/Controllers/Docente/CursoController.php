@@ -42,4 +42,22 @@ if ($estudiante->fotos && $estudiante->fotos->count() > 0) {
 
         return view('docente.curso.estudiantes', compact('curso', 'estudiantes'));
     }
+
+           public function descargarListaPDF($id)
+    {
+        $curso = \App\Models\Curso::findOrFail($id);
+        
+        // ✅ ORDENADO ALFABÉTICAMENTE DE LA A A LA Z
+        $estudiantes = \App\Models\Estudiante::where('curso_id', $curso->id)
+                        ->orderBy('apellido', 'asc') // Ordena por apellido de forma ascendente
+                        ->orderBy('nombre', 'asc')   // Si hay dos apellidos iguales, ordena por nombre
+                        ->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('docente.cursos.lista_pdf', compact('curso', 'estudiantes'));
+        
+        $pdf->setPaper('A4', 'portrait');
+
+        $nombreArchivo = 'Lista_' . str_replace(' ', '_', $curso->nombre) . '_' . $curso->paralelo . '.pdf';
+        return $pdf->download($nombreArchivo);
+    }
 }

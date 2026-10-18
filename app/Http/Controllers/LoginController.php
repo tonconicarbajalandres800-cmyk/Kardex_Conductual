@@ -20,12 +20,19 @@ class LoginController extends Controller
      */
     public function login(Request $request)
     {
-        // Validar credenciales + captcha
-        $credentials = $request->validate([
+        // Reglas base de validación
+        $rules = [
             'email'    => 'required|email',
             'password' => 'required',
-            'captcha'  => 'required|captcha',
-        ], [
+        ];
+
+        // El captcha solo se omite en entorno de pruebas (php artisan test).
+        // En producción, local y staging se sigue exigiendo normalmente.
+        if (!app()->environment('testing')) {
+            $rules['captcha'] = 'required|captcha';
+        }
+
+        $credentials = $request->validate($rules, [
             'captcha.required' => 'Debes ingresar el código de seguridad.',
             'captcha.captcha'  => 'El código de seguridad es incorrecto. Intenta de nuevo.',
         ]);
@@ -48,8 +55,8 @@ class LoginController extends Controller
                     return redirect()->route('padre.dashboard');
                 case 'regente':
                     return redirect()->route('regente.dashboard');
-                case 'estudiante':
-                    return redirect()->route('estudiante.dashboard');
+               // case 'estudiante':
+                 //   return redirect()->route('estudiante.dashboard');
                 default:
                     return redirect()->intended('/');
             }

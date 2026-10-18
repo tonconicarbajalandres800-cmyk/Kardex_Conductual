@@ -19,26 +19,18 @@ class IncidenciaController extends Controller
         $user = Auth::user();
         $docente = Docente::where('user_id', $user->id)->first();
         
+        // ✅ OBTENER LAS MATERIAS REALES DEL DOCENTE
         $materiasDocente = [];
         if ($docente) {
-            if ($docente->materias) {
-                if (is_array($docente->materias)) {
-                    $materiasDocente = $docente->materias;
-                } else {
-                    $materiasDocente = json_decode($docente->materias, true) ?? [];
-                }
-            }
-            if (empty($materiasDocente) && $docente->especialidad) {
+            if (!empty($docente->materias) && is_array($docente->materias)) {
+                $materiasDocente = $docente->materias;
+            } elseif ($docente->especialidad) {
                 $materiasDocente = [$docente->especialidad];
             }
         }
         
-        if (empty($materiasDocente)) {
-            $materiasDocente = ['Matemáticas', 'Física', 'Química', 'Lenguaje', 'Historia', 'Biología', 'Educación Física', 'Inglés', 'Arte', 'Música', 'Religión'];
-            $mostrarAdvertencia = true;
-        } else {
-            $mostrarAdvertencia = false;
-        }
+        // ✅ SI ESTÁ VACÍO, SOLO ACTIVAMOS LA ADVERTENCIA (NO ASIGNAMOS TODAS)
+        $mostrarAdvertencia = empty($materiasDocente);
 
         $cursos = Curso::all();
         
@@ -125,21 +117,25 @@ class IncidenciaController extends Controller
         $user = Auth::user();
         $docente = Docente::where('user_id', $user->id)->first();
         
+        // ✅ OBTENER MATERIAS REALES
         $materiasDocente = [];
         if ($docente) {
-            if ($docente->materias) {
-                if (is_array($docente->materias)) {
-                    $materiasDocente = $docente->materias;
-                } else {
-                    $materiasDocente = json_decode($docente->materias, true) ?? [];
-                }
-            }
-            if (empty($materiasDocente) && $docente->especialidad) {
+            if (!empty($docente->materias) && is_array($docente->materias)) {
+                $materiasDocente = $docente->materias;
+            } elseif ($docente->especialidad) {
                 $materiasDocente = [$docente->especialidad];
             }
         }
         
-        if (!empty($materiasDocente) && !in_array($request->materia, $materiasDocente)) {
+        // 🛑 BLOQUEO: Si no tiene materias, no puede registrar
+        if (empty($materiasDocente)) {
+            return redirect()->back()
+                ->with('error', '❌ No tienes materias asignadas. Contacta al administrador.')
+                ->withInput();
+        }
+
+        // 🛑 BLOQUEO: Si intenta enviar una materia que no le pertenece
+        if (!in_array($request->materia, $materiasDocente)) {
             return redirect()->back()
                 ->with('error', '❌ La materia seleccionada no está asignada a tu perfil.')
                 ->withInput();
@@ -214,21 +210,25 @@ class IncidenciaController extends Controller
         $user = Auth::user();
         $docente = Docente::where('user_id', $user->id)->first();
         
+        // ✅ OBTENER MATERIAS REALES
         $materiasDocente = [];
         if ($docente) {
-            if ($docente->materias) {
-                if (is_array($docente->materias)) {
-                    $materiasDocente = $docente->materias;
-                } else {
-                    $materiasDocente = json_decode($docente->materias, true) ?? [];
-                }
-            }
-            if (empty($materiasDocente) && $docente->especialidad) {
+            if (!empty($docente->materias) && is_array($docente->materias)) {
+                $materiasDocente = $docente->materias;
+            } elseif ($docente->especialidad) {
                 $materiasDocente = [$docente->especialidad];
             }
         }
         
-        if (!empty($materiasDocente) && !in_array($request->materia, $materiasDocente)) {
+        // 🛑 BLOQUEO: Si no tiene materias, no puede registrar
+        if (empty($materiasDocente)) {
+            return redirect()->back()
+                ->with('error', '❌ No tienes materias asignadas. Contacta al administrador.')
+                ->withInput();
+        }
+
+        // 🛑 BLOQUEO: Si intenta enviar una materia que no le pertenece
+        if (!in_array($request->materia, $materiasDocente)) {
             return redirect()->back()
                 ->with('error', '❌ La materia seleccionada no está asignada a tu perfil.')
                 ->withInput();
@@ -291,7 +291,7 @@ class IncidenciaController extends Controller
     }
 
     // ============================================
-    // MÉTODOS PARA WHATSAPP
+    // MÉTODOS PARA WHATSAPP (Sin cambios)
     // ============================================
 
     public function enviarWhatsAppIncidencia($id)
@@ -409,7 +409,7 @@ class IncidenciaController extends Controller
     }
 
     // ============================================
-    // MÉTODOS PARA AJAX
+    // MÉTODOS PARA AJAX (Sin cambios)
     // ============================================
 
     public function getIncidenciasEstudiante($id)
@@ -465,7 +465,7 @@ class IncidenciaController extends Controller
     }
 
     // ============================================
-    // MÉTODOS PARA CITACIONES
+    // MÉTODOS PARA CITACIONES (Sin cambios)
     // ============================================
 
     public function mostrarCitacion($estudianteId)

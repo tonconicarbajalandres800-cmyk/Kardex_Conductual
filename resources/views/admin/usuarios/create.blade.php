@@ -202,7 +202,7 @@
             </div>
 
             <!-- ============================================ -->
-            <!-- FOTO -->
+            <!-- FOTO PRINCIPAL -->
             <!-- ============================================ -->
             <div class="mt-6">
                 <h3 class="font-black text-blue-900 dark:text-blue-200 border-b border-gray-200 dark:border-gray-700 pb-2 mb-4 flex items-center gap-2">
@@ -210,11 +210,11 @@
                     FOTOGRAFÍA
                 </h3>
                 <div class="flex items-center space-x-4">
-                    <div class="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-300 dark:border-gray-600">
+                    <div class="foto-preview w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-300 dark:border-gray-600">
                         <i class="fi fi-sr-picture text-4xl text-gray-400"></i>
                     </div>
                     <div>
-                        <input type="file" name="foto" accept="image/*" 
+                        <input type="file" name="foto" accept="image/*" onchange="previewFoto(this)"
                                class="border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                         <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
                             <i class="fi fi-sr-info"></i>
@@ -275,6 +275,27 @@
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">N° Lista</label>
                                 <input type="number" name="hermanos[0][numero_lista]" 
                                        class="w-full border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" min="1">
+                            </div>
+                            <!-- FOTO DEL ESTUDIANTE -->
+                            <div class="col-span-3">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                                    <i class="fi fi-sr-camera"></i>
+                                    Foto del Estudiante
+                                </label>
+                                <div class="flex items-center gap-3">
+                                    <div class="foto-preview w-16 h-16 bg-gray-100 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-300 dark:border-gray-500">
+                                        <i class="fi fi-sr-picture text-2xl text-gray-400"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <input type="file" name="hermanos[0][foto]" accept="image/*" 
+                                               onchange="previewFoto(this)"
+                                               class="w-full border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm">
+                                        <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                            <i class="fi fi-sr-info"></i>
+                                            Foto opcional (JPG, PNG)
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -603,9 +624,45 @@
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">N° Lista</label>
                     <input type="number" name="hermanos[${hermanoCount-1}][numero_lista]" class="w-full border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" min="1">
                 </div>
+                <!-- FOTO DEL ESTUDIANTE -->
+                <div class="col-span-3">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                        <i class="fi fi-sr-camera"></i>
+                        Foto del Estudiante
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <div class="foto-preview w-16 h-16 bg-gray-100 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-300 dark:border-gray-500">
+                            <i class="fi fi-sr-picture text-2xl text-gray-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <input type="file" name="hermanos[${hermanoCount-1}][foto]" accept="image/*" 
+                                   onchange="previewFoto(this)"
+                                   class="w-full border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm">
+                            <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                <i class="fi fi-sr-info"></i>
+                                Foto opcional (JPG, PNG)
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
         container.appendChild(div);
+    }
+
+    // ============================================
+    // PREVIEW DE FOTO
+    // ============================================
+    function previewFoto(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            const preview = input.closest('.flex').querySelector('.foto-preview');
+            
+            reader.onload = function(e) {
+                preview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
     }
 </script>
 
