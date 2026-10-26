@@ -22,6 +22,16 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- MENSAJES DE ERROR                          -->
+    <!-- ========================================== -->
+    @if(session('error'))
+        <div class="bg-red-500 text-white p-4 rounded-lg mb-4 flex items-center gap-2 shadow-lg">
+            <i class="fi fi-sr-cross-circle text-2xl"></i>
+            <span class="font-semibold">{{ session('error') }}</span>
+        </div>
+    @endif
+
     @if($errors->any())
         <div class="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 text-red-700 dark:text-red-300 p-4 rounded-lg mb-4">
             <div class="flex items-center gap-2 mb-2">
@@ -36,7 +46,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('admin.usuarios.store') }}" enctype="multipart/form-data" id="registroForm">
+    <form method="POST" action="{{ route('admin.usuarios.store') }}" enctype="multipart/form-data" id="registroForm" onsubmit="alert('¡El formulario se está enviando al servidor!');">
         @csrf
 
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700">
@@ -386,7 +396,7 @@
                 </div>
             </div>
 
-            <!-- ============================================ -->
+                        <!-- ============================================ -->
             <!-- BOTONES -->
             <!-- ============================================ -->
             <div class="mt-6 flex justify-end space-x-3 border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -395,7 +405,9 @@
                     <i class="fi fi-sr-cross"></i>
                     Cancelar
                 </a>
-                <button type="submit" 
+                
+                <!-- ⚠️ BOTÓN MODIFICADO PARA FORZAR ENVÍO -->
+                <button type="button" onclick="enviarFormularioForzado()" 
                         class="px-6 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition font-semibold shadow-md hover:shadow-lg flex items-center gap-2">
                     <i class="fi fi-sr-disk"></i>
                     Registrar Usuario
@@ -406,6 +418,16 @@
 </div>
 
 <script>
+
+
+
+function enviarFormularioForzado() {
+        const form = document.getElementById('registroForm');
+        // Quitamos la validación del navegador
+        form.setAttribute('novalidate', 'true');
+        // Enviamos a la fuerza
+        form.submit();
+    }
     // ============================================
     // AGREGAR PADRE (MÚLTIPLES PADRES)
     // ============================================
